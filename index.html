@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>黃金裔打地鼠</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050a16; --panel:#0e1a30; --accent:#8fd4ff; --accent-dim:#3f6f8f; --accent2:#b9a6ff;
+    --text:#e7f1ff; --muted:#7f93b3; --hole:#020510; --warn:#e8735a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overscroll-behavior:none}
+  body{
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(1px 1px at 20px 30px,#fff,transparent 60%),
+      radial-gradient(1px 1px at 90px 10px,#fff,transparent 60%),
+      radial-gradient(1.5px 1.5px at 150px 120px,#cfe8ff,transparent 60%),
+      radial-gradient(1px 1px at 60px 170px,#fff,transparent 60%),
+      radial-gradient(2px 2px at 130px 80px,#9fd3ff,transparent 60%),
+      radial-gradient(1px 1px at 180px 50px,#fff,transparent 60%),
+      radial-gradient(ellipse at 50% 0%,#1b3566 0%,var(--bg) 62%);
+    background-repeat:repeat,repeat,repeat,repeat,repeat,repeat,no-repeat;
+    background-size:200px 200px,200px 200px,200px 200px,200px 200px,200px 200px,200px 200px,100% 100%;
+    color:var(--text);font-family:"Noto Serif TC",serif;
+    display:flex;flex-direction:column;align-items:center;
+    user-select:none;-webkit-user-select:none;overflow-x:hidden;
+    touch-action:manipulation;
+    padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
+  }
+  header{width:100%;max-width:640px;padding:12px 16px 6px;display:flex;flex-direction:column;gap:6px}
+  .topline{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .score-wrap{display:flex;flex-direction:column}
+  .label{font-size:12px;color:var(--muted);letter-spacing:.15em}
+  #score{font-size:clamp(22px,6vw,34px);font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums;text-shadow:0 0 14px rgba(143,212,255,.55)}
+  .p2line{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;visibility:hidden}
+  .p2line.on{visibility:visible}
+  #timer{font-size:clamp(24px,7vw,36px);font-weight:900;font-variant-numeric:tabular-nums;color:var(--warn);text-shadow:0 0 14px rgba(232,115,90,.5)}
+  #pauseBtn, #endBtn, #muteBtn{
+    background:rgba(143,212,255,.06);border:1px solid var(--accent-dim);color:var(--accent);
+    font-family:inherit;font-size:15px;padding:10px 20px;border-radius:999px;cursor:pointer;
+    min-height:44px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;
+  }
+  #pauseBtn:hover, #endBtn:hover, #muteBtn:hover{background:rgba(143,212,255,.16)}
+  #muteBtn{
+    position:fixed;z-index:30;bottom:calc(env(safe-area-inset-bottom) + 12px);right:12px;
+    padding:8px 14px;font-size:14px;min-height:38px;
+    background:#0e1a30;box-shadow:0 2px 10px rgba(0,0,0,.5)
+  }
+  #muteBtn:hover{background:#15264a}
+  #muteBtn.on{color:var(--warn);border-color:var(--warn)}
+  #seeds{display:flex;gap:5px;justify-content:center;padding-top:4px}
+  .seed{width:9px;height:9px;border-radius:50%;background:#16233a;transition:background .3s, box-shadow .3s}
+  .seed.lit{box-shadow:0 0 6px currentColor}
+  #board{
+    width:min(92vw,600px);aspect-ratio:1;display:grid;
+    grid-template-columns:repeat(4,1fr);gap:clamp(6px,2vw,14px);padding:12px;margin-top:2px;position:relative
+  }
+  #stageArt{
+    width:min(92vw,600px);aspect-ratio:1778/1000;object-fit:cover;
+    border-radius:14px;margin:6px 0 10px;
+    border:1px solid rgba(143,212,255,.3);box-shadow:0 0 24px rgba(79,150,220,.35),0 6px 20px rgba(0,0,0,.5)
+  }
+  .hole{position:relative;border-radius:50%;overflow:hidden;cursor:pointer;
+    background:radial-gradient(ellipse at 50% 70%,var(--hole) 55%,#0a1830 70%,#132544 100%);
+    border:1px solid rgba(143,212,255,.3);
+    box-shadow:0 0 14px rgba(143,212,255,.32),inset 0 -6px 12px rgba(0,0,0,.7)}
+  .token{
+    position:absolute;inset:8%;
+    display:flex;align-items:flex-end;justify-content:center;
+    transform:translateY(110%);transition:transform .22s ease-out;pointer-events:none;
+  }
+  .token.up{transform:translateY(0)}
+  .token.hit{transform:translateY(0) scale(.85);filter:brightness(1.8);transition:transform .08s, filter .08s}
+  .token .art{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(10,25,50,.6))}
+  .pop{
+    position:absolute;pointer-events:none;font-weight:900;color:var(--accent);
+    font-size:clamp(12px,3.4vw,18px);white-space:nowrap;transform:translate(-50%,-50%);
+    animation:rise .9s ease-out forwards;text-shadow:0 2px 6px #000;z-index:5
+  }
+  .pop.bad{color:var(--warn)}
+  @keyframes rise{from{opacity:1;transform:translate(-50%,-50%)}to{opacity:0;transform:translate(-50%,-160%)}}
+  .hammer-fx{
+    position:fixed;pointer-events:none;z-index:15;width:clamp(52px,15vw,96px);height:auto;
+    transform:translate(-50%,-50%) scale(1.4);opacity:0;
+    filter:drop-shadow(0 6px 12px rgba(0,0,0,.6));
+    animation:hammer-stamp .28s ease-out forwards;
+  }
+  @keyframes hammer-stamp{
+    0%{transform:translate(-50%,-50%) scale(1.5);opacity:0}
+    25%{opacity:1}
+    45%{transform:translate(-50%,-50%) scale(.92);opacity:1}
+    100%{transform:translate(-50%,-50%) scale(1.02);opacity:0}
+  }
+  .overlay{
+    position:fixed;inset:0;background:rgba(3,6,16,.9);display:none;
+    flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:20;padding:24px;text-align:center
+  }
+  .overlay.on{display:flex}
+  #endOv{justify-content:flex-start;padding-top:calc(env(safe-area-inset-top) + 48px)}
+  .overlay h1{font-size:clamp(28px,8vw,48px);color:var(--accent);font-weight:900;letter-spacing:.08em;text-shadow:0 0 20px rgba(143,212,255,.5)}
+  .overlay h2{font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--text)}
+  .overlay p{color:var(--muted);line-height:1.8;max-width:420px}
+  #startHint, #pauseHint{font-size:clamp(20px,5.5vw,28px);color:var(--text);font-weight:700}
+  #pauseOv h2{color:var(--accent)}
+  .overlay .big{font-size:clamp(28px,8vw,44px);font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums;text-shadow:0 0 16px rgba(143,212,255,.5)}
+  #endArt{width:min(78vw,340px);height:auto;margin-bottom:-12px;filter:drop-shadow(0 8px 24px rgba(20,60,120,.6))}
+  #endText{font-size:clamp(22px,6vw,32px);color:var(--text);font-weight:700}
+  .btn{
+    background:linear-gradient(135deg,#bfe8ff,#6fa8ff);color:#06162c;border:none;font-family:inherit;font-weight:900;
+    font-size:18px;padding:12px 36px;border-radius:999px;cursor:pointer;box-shadow:0 0 20px rgba(111,168,255,.45)
+  }
+  .btn:hover{filter:brightness(1.08)}
+  #banner{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+    width:max-content;max-width:90%;
+    font-size:clamp(26px,7.5vw,44px);
+    font-weight:900;color:var(--accent);text-shadow:0 0 18px rgba(143,212,255,.6),0 0 6px #000;
+    opacity:0;pointer-events:none;transition:opacity .4s;z-index:10
+  }
+  #banner.on{opacity:1}
+  #banner .banner-img{height:clamp(68px,19vw,120px);width:auto;filter:drop-shadow(0 4px 10px rgba(0,0,0,.6))}
+</style>
+</head>
+<body>
+
+<button id="muteBtn" type="button">靜音</button>
+
+<header>
+  <div class="topline">
+    <div class="score-wrap">
+      <span class="label" id="phaseLabel">第一階段</span>
+      <span id="score">0</span>
+    </div>
+    <button id="pauseBtn" type="button">暫停</button>
+  </div>
+  <div class="p2line" id="p2line">
+    <span id="timer">60.0</span>
+    <button id="endBtn" type="button">結束遊戲</button>
+  </div>
+  <div id="seeds"></div>
+</header>
+
+<div id="board">
+  <div id="banner"></div>
+</div>
+<img id="stageArt" src="人物貼圖/first.webp" alt="">
+
+<div class="overlay on" id="startOv">
+  <h1>黃金裔打地鼠</h1>
+  <p id="startHint">小心不要打到開拓者。</p>
+  <button class="btn" id="startBtn" type="button">開始輪迴</button>
+  <label style="color:var(--muted);font-size:14px;cursor:pointer"><input type="checkbox" id="testChk" checked> 測試模式（每下 +1,000,000、第二階段 15 秒）</label>
+</div>
+
+<div class="overlay" id="pauseOv">
+  <h2>暫停中</h2>
+  <p id="pauseHint">永劫輪迴尚未結束。</p>
+  <button class="btn" id="resumeBtn" type="button">繼續</button>
+</div>
+
+<div class="overlay" id="endOv">
+  <img id="endArt" src="ending.png" alt="">
+  <h2 id="endTitle">結算</h2>
+  <div class="big" id="endScore">0</div>
+  <p id="endText"></p>
+  <button class="btn" id="againBtn" type="button">再創世</button>
+</div>
+
+<script>
+/* ================================================================
+   設定區：角色、台詞、數值都在這裡改
+   ================================================================ */
+const TARGET = 33550336;
+
+// 13 位黃金裔。title 是火種稱號，有錯或想改直接改。img 是人物貼圖資料夾裡對應的檔案。
+// weight 是第一階段的出現權重，預設 1；調低可以降低出現機率（小昔漣用這個降低出線率）。
+const HEIRS = [
+  { name:"阿格萊雅",   title:"浪漫", color:"#e8c54a", img:"人物貼圖/Aglaea.webp" },      // 黃
+  { name:"緹寶",       title:"門徑", color:"#cf3a3a", img:"人物貼圖/Tribios.webp",   hit:"音效/緹寶受擊.mp3", hitVol:0.5 },     // 紅
+  { name:"萬敵",       title:"紛爭", color:"#e08a3c", img:"人物貼圖/Mydeimos.webp",  hit:"音效/萬敵受擊.mp3", hitVol:1.0 },    // 橘色
+  { name:"遐蝶",       title:"死亡", color:"#9b4f9b", img:"人物貼圖/Castorice.webp", hit:"音效/遐蝶受擊.mp3" },   // 紫（鬱金香）
+  { name:"那刻夏",     title:"理性", color:"#3f9142", img:"人物貼圖/Anaxagoras.webp" },  // 綠色
+  { name:"風堇",       title:"天空", color:"#e6607a", img:"人物貼圖/Hyacinthia.webp", hit:"音效/風堇受擊.mp3", hitVol:0.5 },  // 桃紅色
+  { name:"賽飛兒",     title:"詭計", color:"#4b2e59", img:"人物貼圖/Cifera.webp",     hit:"音效/賽飛兒受擊.mp3", hitVol:0.5 },      // 紫（黑加侖子）
+  { name:"白厄",       title:"負世", color:"#5f82a3", img:"人物貼圖/Khaslana.webp",  hit:"音效/白厄受擊.mp3", hitVol:1.0 },    // 海豚藍
+  { name:"刻律德菈",   title:"律法", color:"#5ec2e0", img:"人物貼圖/Cerydra.webp" },     // 天空藍
+  { name:"海瑟音",     title:"海洋", color:"#2b4ea8", img:"人物貼圖/Helektra.webp" },    // 群青藍
+  { name:"長夜月",     title:"歲月", color:"#b9a8d4", img:"人物貼圖/March 7th.webp" },   // 粉彩紫（薰衣草）
+  { name:"丹恆·騰荒",  title:"大地", color:"#d2c08f", img:"人物貼圖/Dan Heng.webp" },    // 米黃色
+  // 昔漣有兩個版本：第一階段是小昔漣（打到總分 ×10），第二階段換成大昔漣（正常計分）
+  { name:"小昔漣",     title:"",     color:"#f7b8c9", img:"人物貼圖/Cyrene.webp", timesTen:true,   // 粉紅（櫻花）
+    phase2:{ name:"昔漣", title:"", color:"#e08aa0", img:"人物貼圖/Demiurge.webp" } },             // 粉紅（櫻花，較深）
+];
+
+// 開拓者男女版，效果一樣（端水）
+const TRAILBLAZERS = [
+  { name:"穹", title:"開拓者", color:"#5c6b7a", img:"人物貼圖/Caelus.webp" },
+  { name:"星", title:"開拓者", color:"#6b5c7a", img:"人物貼圖/Stelle.webp" },
+];
+
+const CFG = {
+  basePoints: 1,            // 第一階段每下的基礎分數（看起來很絕望的那個 +1）
+  p2BasePoints: 1000,       // 第二階段每下的基礎分數
+  seedMultiplier: 3,        // 【隱藏加速】集齊 13 枚火種後，倍率 ×3（可疊加）
+  phase2Seconds: 60,
+  p1SpawnEvery: [750, 1150], // 第一階段：多久冒一隻（毫秒，隨機區間）
+  p1Stay:       [1150, 1750],// 第一階段：停留多久
+  p2SpawnEvery: [750, 1150], // 第二階段：跟第一階段一樣的速度
+  p2Stay:       [1150, 1750],
+  holes: 16,
+};
+
+// 測試模式（開始畫面的勾選框）。正式版把勾選框拿掉就好
+const NORMAL = { basePoints: CFG.basePoints, p2BasePoints: CFG.p2BasePoints, phase2Seconds: CFG.phase2Seconds };
+const TEST   = { basePoints: 1000000,        p2BasePoints: 1000000,          phase2Seconds: 15 };
+
+/* ================================================================
+   以下是遊戲邏輯
+   ================================================================ */
+const $ = s => document.querySelector(s);
+const board = $("#board"), scoreEl = $("#score"), timerEl = $("#timer");
+const seedsEl = $("#seeds"), bannerEl = $("#banner");
+
+const fmt = n => n.toLocaleString("en-US");
+const rand = ([a,b]) => a + Math.random()*(b-a);
+
+// 音效
+const bgm1 = new Audio("音效/第一階段GBM.mp3"); bgm1.loop = true; bgm1.volume = 0.45;
+const bgm2 = new Audio("音效/第二階段BGM.mp3"); bgm2.loop = true; bgm2.volume = 0.45;
+let currentBgm = null;
+let muted = false;
+
+function playBgm(bgm){
+  if (currentBgm === bgm) return;
+  if (currentBgm) currentBgm.pause();
+  currentBgm = bgm;
+  bgm.currentTime = 0;
+  bgm.muted = muted;
+  bgm.play().catch(()=>{});
+}
+// 預先載入音效，避免第一次播放時要重新抓檔案造成延遲或沒聲音
+const sfxCache = {};
+function preloadSfx(src){
+  const a = new Audio(src);
+  a.preload = "auto";
+  a.load();
+  sfxCache[src] = a;
+  return a;
+}
+function playSfx(src, vol=0.9){
+  if (muted) return;
+  let a = sfxCache[src] || preloadSfx(src);
+  if (!a.paused) a = a.cloneNode(true); // 同一個音效還在播就另外複製一份疊播，避免被截斷
+  a.volume = vol;
+  a.currentTime = 0;
+  a.play().catch(()=>{});
+}
+// 一開始就把所有受擊音效跟「出手」先載好
+HEIRS.forEach(hr => {
+  if (hr.hit) preloadSfx(hr.hit);
+  if (hr.phase2 && hr.phase2.hit) preloadSfx(hr.phase2.hit);
+});
+preloadSfx("音效/出手.mp3");
+
+function toggleMute(){
+  muted = !muted;
+  bgm1.muted = muted;
+  bgm2.muted = muted;
+  $("#muteBtn").textContent = muted ? "取消靜音" : "靜音";
+  $("#muteBtn").classList.toggle("on", muted);
+}
+
+let state;
+const holes = [];
+
+// 建洞
+for (let i=0;i<CFG.holes;i++){
+  const h = document.createElement("div");
+  h.className = "hole";
+  const t = document.createElement("div");
+  t.className = "token";
+  t.innerHTML = '<img class="art" alt="">';
+  h.appendChild(t);
+  h.addEventListener("pointerdown", e => { e.preventDefault(); showHammer(e); whack(i, e); });
+  board.appendChild(h);
+  holes.push({ el:h, tok:t, mole:null });
+}
+
+// 火種點點（不加說明，讓玩家自己發現）
+const seedDots = HEIRS.map(hr => {
+  const d = document.createElement("span");
+  d.className = "seed";
+  d.style.color = hr.color;
+  seedsEl.appendChild(d);
+  return d;
+});
+
+function newState(){
+  return {
+    phase: 0,          // 0=未開始 1=第一階段 2=第二階段 3=結束
+    paused: false,
+    clock: 0,          // 遊戲內時間（暫停時不走）
+    last: 0,
+    score: 0,
+    mult: 1,
+    seeds: new Set(),
+    nextSpawn: 0,
+    timeLeft: CFG.phase2Seconds*1000,
+    transition: false,
+  };
+}
+
+function reset(){
+  state = newState();
+  holes.forEach(h => clearMole(h));
+  seedDots.forEach(d => { d.classList.remove("lit"); d.style.background=""; });
+  scoreEl.textContent = "0";
+  $("#phaseLabel").textContent = "第一階段";
+  $("#p2line").classList.remove("on");
+  timerEl.textContent = CFG.phase2Seconds.toFixed(1);
+  $("#stageArt").src = "人物貼圖/first.webp";
+}
+
+let rafId = null;
+
+function start(){
+  if (state && state.phase !== 0 && state.phase !== 3) return; // 防止手機連點兩下同時跑出兩條遊戲迴圈
+  Object.assign(CFG, $("#testChk").checked ? TEST : NORMAL);
+  reset();
+  state.phase = 1;
+  state.last = performance.now();
+  $("#startOv").classList.remove("on");
+  playBgm(bgm1);
+  if (rafId !== null) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(loop);
+}
+
+function loop(now){
+  if (state.phase === 0 || state.phase === 3){ rafId = null; return; }
+  const dt = now - state.last;
+  state.last = now;
+  if (!state.paused && !state.transition){
+    state.clock += dt;
+    tick(dt);
+  }
+  rafId = requestAnimationFrame(loop);
+}
+
+function tick(dt){
+  // 收回時間到的
+  holes.forEach(h => {
+    if (h.mole && !h.mole.hit && state.clock >= h.mole.until){
+      if (h.mole.trail) dodgeTrailblazer(h);
+      clearMole(h);
+    }
+  });
+
+  // 冒新的
+  if (state.clock >= state.nextSpawn){
+    spawn();
+    const range = state.phase === 2 ? CFG.p2SpawnEvery : CFG.p1SpawnEvery;
+    state.nextSpawn = state.clock + rand(range);
+  }
+
+  // 第二階段倒數
+  if (state.phase === 2){
+    state.timeLeft -= dt;
+    if (state.timeLeft <= 0){ state.timeLeft = 0; timerEl.textContent = "0.0"; endGame(); return; }
+    timerEl.textContent = (state.timeLeft/1000).toFixed(1);
+  }
+}
+
+function pickHeirIndex(){
+  // 加權隨機：weight 預設 1，小昔漣的 weight < 1 所以出現機率較低
+  const total = HEIRS.reduce((s,hr) => s + (hr.weight ?? 1), 0);
+  let r = Math.random() * total;
+  for (let i=0;i<HEIRS.length;i++){
+    r -= HEIRS[i].weight ?? 1;
+    if (r < 0) return i;
+  }
+  return HEIRS.length - 1;
+}
+
+function spawn(){
+  const free = holes.filter(h => !h.mole);
+  if (!free.length) return;
+  const h = free[Math.floor(Math.random()*free.length)];
+  let who, trail = false, idx = -1;
+  if (state.phase === 2){
+    // 第二階段：開拓者跟每位黃金裔的出現機率完全一樣，均勻從全部 15 個角色裡抽
+    const pick = Math.floor(Math.random() * (HEIRS.length + TRAILBLAZERS.length));
+    if (pick < HEIRS.length){
+      idx = pick;
+      const base = HEIRS[idx];
+      who = base.phase2 ? base.phase2 : base;
+    } else {
+      who = TRAILBLAZERS[pick - HEIRS.length];
+      trail = true;
+    }
+  } else {
+    idx = pickHeirIndex();
+    who = HEIRS[idx];
+  }
+  const stay = rand(state.phase === 2 ? CFG.p2Stay : CFG.p1Stay);
+  h.mole = { who, trail, idx, until: state.clock + stay, hit:false };
+  h.tok.querySelector(".art").src = who.img;
+  h.tok.classList.remove("hit");
+  void h.tok.offsetWidth;
+  h.tok.classList.add("up");
+}
+
+function clearMole(h){
+  h.mole = null;
+  h.tok.classList.remove("up","hit");
+}
+
+function dodgeTrailblazer(h){
+  // 開拓者沒被打到、自己縮回去：加其他角色兩倍的分數
+  const gain = (state.phase === 2 ? CFG.p2BasePoints : CFG.basePoints) * state.mult * 2;
+  addScore(gain);
+  const rect = h.el.getBoundingClientRect();
+  popText({ clientX: rect.left + rect.width/2, clientY: rect.top + rect.height/2 },
+    "+" + fmt(gain), { color: h.mole.who.color });
+}
+
+function whack(i, e){
+  if (state.phase !== 1 && state.phase !== 2) return;
+  if (state.paused || state.transition) return;
+  const h = holes[i];
+  if (!h.mole || h.mole.hit) return;
+  h.mole.hit = true;
+  h.tok.classList.add("hit");
+  setTimeout(() => clearMole(h), 160);
+
+  const who = h.mole.who;
+
+  if (h.mole.trail){
+    state.score = TARGET;
+    renderScore();
+    popText(e, "回到 " + fmt(TARGET), { bad:true });
+    return;
+  }
+
+  // 火種收集
+  const idx = h.mole.idx;
+  if (!state.seeds.has(idx)){
+    state.seeds.add(idx);
+    seedDots[idx].classList.add("lit");
+    seedDots[idx].style.background = who.color;
+  }
+
+  if (who.hit && state.phase === 1) playSfx(who.hit, who.hitVol ?? 0.9);
+
+  const gain = (state.phase === 2 ? CFG.p2BasePoints : CFG.basePoints) * state.mult;
+  if (who.timesTen){
+    // 小昔漣：先加這下的分，再把總分 ×10
+    addScore((state.score + gain) * 10 - state.score);
+    popText(e, "×10", { color: who.color });
+  } else {
+    addScore(gain);
+    popText(e, "+" + fmt(gain), { color: who.color });
+  }
+
+  if (state.seeds.size === HEIRS.length){
+    state.mult *= CFG.seedMultiplier;
+    state.seeds.clear();
+    setTimeout(() => {
+      seedDots.forEach(d => { d.classList.remove("lit"); d.style.background=""; });
+    }, 400);
+    flashBanner("火種齊聚", 900);
+  }
+}
+
+function addScore(n){
+  state.score += n;
+  if (state.phase === 1 && state.score >= TARGET){
+    state.score = TARGET;
+    renderScore();
+    enterPhase2();
+    return;
+  }
+  renderScore();
+}
+
+function renderScore(){ scoreEl.textContent = fmt(state.score); }
+
+function enterPhase2(){
+  state.transition = true;
+  holes.forEach(h => clearMole(h));
+  currentBgm?.pause(); // 過場這段不要有背景音樂，只留「出手」音效
+  flashBanner("所以我出手了", 2200, "人物貼圖/Black Swan.webp");
+  playSfx("音效/出手.mp3", 1.0);
+  setTimeout(() => {
+    state.phase = 2;
+    state.transition = false;
+    state.timeLeft = CFG.phase2Seconds*1000;
+    state.nextSpawn = state.clock + 300;
+    state.last = performance.now();
+    $("#phaseLabel").textContent = "第二階段";
+    $("#p2line").classList.add("on");
+    $("#stageArt").src = "人物貼圖/second.webp";
+    playBgm(bgm2);
+  }, 2400);
+}
+
+function endGame(){
+  if (state.phase !== 2) return;
+  state.phase = 3;
+  $("#p2line").classList.remove("on");
+  holes.forEach(h => clearMole(h));
+  const failed = state.score === TARGET;
+  $("#endTitle").textContent = failed ? "失敗" : "結算";
+  $("#endScore").textContent = fmt(state.score);
+  $("#endText").textContent = failed ? "白厄再次踏上了輪迴" : "Hello, world";
+  $("#endArt").src = failed ? "人物貼圖/fail CG.png" : "ending.png";
+  $("#endOv").classList.add("on");
+}
+
+function popText(e, text, opts={}){
+  const p = document.createElement("div");
+  p.className = "pop" + (opts.bad ? " bad" : "");
+  if (opts.color) p.style.color = opts.color;
+  p.textContent = text;
+  p.style.left = e.clientX + "px";
+  p.style.top = e.clientY + "px";
+  p.style.position = "fixed";
+  document.body.appendChild(p);
+  setTimeout(() => p.remove(), 900);
+}
+
+function showHammer(e){
+  const img = document.createElement("img");
+  img.src = "人物貼圖/Khaslana alter.png";
+  img.className = "hammer-fx";
+  img.style.left = e.clientX + "px";
+  img.style.top = e.clientY + "px";
+  document.body.appendChild(img);
+  setTimeout(() => img.remove(), 280);
+}
+
+let bannerTimer;
+function flashBanner(text, ms, imgSrc){
+  bannerEl.textContent = "";
+  if (imgSrc){
+    const img = document.createElement("img");
+    img.className = "banner-img";
+    img.src = imgSrc;
+    bannerEl.appendChild(img);
+  }
+  bannerEl.appendChild(document.createTextNode(text));
+  bannerEl.classList.add("on");
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => bannerEl.classList.remove("on"), ms);
+}
+
+function setPaused(p){
+  if (state.phase !== 1 && state.phase !== 2) return;
+  state.paused = p;
+  $("#pauseOv").classList.toggle("on", p);
+  state.last = performance.now();
+  if (p) currentBgm?.pause(); else currentBgm?.play().catch(()=>{});
+}
+
+$("#startBtn").addEventListener("click", start);
+$("#endBtn").addEventListener("click", () => endGame());
+$("#pauseBtn").addEventListener("click", () => setPaused(true));
+$("#muteBtn").addEventListener("click", toggleMute);
+$("#resumeBtn").addEventListener("click", () => setPaused(false));
+$("#againBtn").addEventListener("click", () => { $("#endOv").classList.remove("on"); start(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) setPaused(true); });
+document.addEventListener("pointerdown", () => playBgm(bgm1), { once:true });
+
+reset();
+</script>
+</body>
+</html>
