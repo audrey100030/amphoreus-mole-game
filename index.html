@@ -385,10 +385,14 @@ function pickHeirIndex(){
   return HEIRS.length - 1;
 }
 
+let lastHole = null;
+
 function spawn(){
-  const free = holes.filter(h => !h.mole);
+  let free = holes.filter(h => !h.mole);
   if (!free.length) return;
+  if (free.length > 1 && lastHole) free = free.filter(h => h !== lastHole); // 避免同一個洞連續冒出
   const h = free[Math.floor(Math.random()*free.length)];
+  lastHole = h;
   let who, trail = false, idx = -1;
   if (state.phase === 2){
     // 第二階段：開拓者跟每位黃金裔的出現機率完全一樣，均勻從全部 15 個角色裡抽
