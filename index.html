@@ -266,6 +266,17 @@ HEIRS.forEach(hr => {
 });
 preloadSfx("音效/出手.mp3");
 
+// 角色貼圖也先預載，不然第一次冒出來時圖片還沒載完，會先看到上一隻角色的殘影才突然換成正確的那隻
+function preloadImg(src){ const img = new Image(); img.src = src; }
+HEIRS.forEach(hr => {
+  preloadImg(hr.img);
+  if (hr.phase2) preloadImg(hr.phase2.img);
+});
+TRAILBLAZERS.forEach(tb => preloadImg(tb.img));
+preloadImg("人物貼圖/Black Swan.webp");
+preloadImg("人物貼圖/Khaslana alter.png");
+preloadImg("人物貼圖/fail CG.png");
+
 function toggleMute(){
   muted = !muted;
   bgm1.muted = muted;
@@ -410,11 +421,19 @@ function spawn(){
     who = HEIRS[idx];
   }
   const stay = rand(state.phase === 2 ? CFG.p2Stay : CFG.p1Stay);
-  h.mole = { who, trail, idx, until: state.clock + stay, hit:false };
-  h.tok.querySelector(".art").src = who.img;
+  const mole = { who, trail, idx, until: state.clock + stay, hit:false };
+  h.mole = mole;
   h.tok.classList.remove("hit");
-  void h.tok.offsetWidth;
-  h.tok.classList.add("up");
+  const artEl = h.tok.querySelector(".art");
+  const reveal = () => {
+    if (h.mole !== mole) return; // 圖片還沒載完這個洞就被清掉或打了，不要再補顯示
+    void h.tok.offsetWidth;
+    h.tok.classList.add("up");
+  };
+  artEl.onload = reveal;
+  artEl.onerror = reveal;
+  artEl.src = who.img;
+  if (artEl.complete) reveal(); // src 跟原本一樣時瀏覽器不會再觸發 onload，這裡補一次
 }
 
 function clearMole(h){
